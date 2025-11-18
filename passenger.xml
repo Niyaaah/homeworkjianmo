@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<nta>
+  <declarations>
+    // Declarations for the UPPAAL Passenger Subsystem Model
+    const int MIN_FLOOR = 1;
+    const int MAX_FLOOR = 10;
+    broadcast chan hallCall;
+    broadcast chan elevatorArrived;
+    broadcast chan enterElevator;
+    broadcast chan carCommand;
+    broadcast chan exitElevator;
+    int passengerFloor;
+    int passengerTarget;
+    int passengerDirection;
+    bool elevatorReady;
+    const int WAIT_TIMEOUT = 60;
+  </declarations>
+
+  <templates>
+    <template>
+      <name>Passenger</name>
+      <declarations>
+        // Local declarations if needed
+      </declarations>
+      <locations>
+        <location id="Idle" x="100" y="100">
+          <name x="100" y="90">Idle</name>
+        </location>
+        <location id="WaitingForElevator" x="100" y="200">
+          <name x="100" y="190">WaitingForElevator</name>
+        </location>
+        <location id="InElevator" x="300" y="200">
+          <name x="300" y="190">InElevator</name>
+        </location>
+        <location id="LeavingElevator" x="300" y="100">
+          <name x="300" y="90">LeavingElevator</name>
+        </location>
+        <location id="AbandonWait" x="100" y="300">
+          <name x="100" y="290">AbandonWait</name>
+        </location>
+      </locations>
+      <edges>
+        <edge source="Idle" target="WaitingForElevator">
+          <label>guard="!elevatorReady"</label>
+          <label>synchronisation="hallCall"</label>
+        </edge>
+        <edge source="WaitingForElevator" target="InElevator">
+          <label>guard="elevatorReady && passengerFloor == currentFloor"</label>
+          <label>synchronisation="elevatorArrived"</label>
+          <label>action="passengerDirection = currentDirection; passengerFloor = currentFloor;"</label>
+        </edge>
+        <edge source="InElevator" target="LeavingElevator">
+          <label>guard="currentFloor == passengerTarget"</label>
+          <label>synchronisation="exitElevator"</label>
+          <label>action="passengerFloor = currentFloor;"</label>
+        </edge>
+        <edge source="LeavingElevator" target="Idle">
+          <label>action="passengerDirection = 0;"</label>
+        </edge>
+        <edge source="WaitingForElevator" target="AbandonWait">
+          <label>guard="WAIT_TIMEOUT == timeOut"</label>
+        </edge>
+      </edges>
+    </template>
+  </templates>
+</nta>
