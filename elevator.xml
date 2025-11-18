@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.uppaal.org/DTD/flat-1_6.dtd'>
+<nta>
+	<declaration>// 全局声明 - 电梯子系统
+// 楼层范围
+const int MIN_FLOOR = 1;
+const int MAX_FLOOR = 10;
+
+// 通道定义
+broadcast chan runCommand;       // 运行指令
+broadcast chan elevatorArrived;  // 电梯到达
+broadcast chan elevatorStopped;  // 电梯停靠完成
+broadcast chan faultSignal;      // 故障信号
+broadcast chan faultCleared;     // 故障清除
+
+// 全局变量
+int elevatorFloor = 1;      // 电梯当前楼层
+int targetFloor;            // 目标楼层
+int elevatorDirection;      // 电梯方向：1=上行，-1=下行，0=停止
+bool hasFault;              // 是否有故障
+bool doorOpen;              // 门是否打开
+bool overloaded;            // 是否超载
+
+// 常量
+const int DOOR_OPEN_TIME = 5;    // 开门等待时间（秒）
+const int FLOOR_TRAVEL_TIME = 3; // 楼层间移动时间（秒）
+</declaration>
+	<template>
+		<name x="5" y="5">Elevator</name>
+		<declaration>// 局部变量
+clock travelTime;  // 移动计时器
+clock doorTime;    // 开门计时器
+int currentFloor = 1;  // 当前楼层
+int direction = 0;     // 当前方向</declaration>
+		<location id="id0" x="-200" y="0">
+			<name x="-210" y="-34">Standby</name>
+			<label kind="comments" x="-210" y="16">待机状态（停靠在某楼层，门关闭）</label>
+		</location>
+		<location id="id1" x="100" y="-150">
+			<name x="90" y="-184">MovingUp</name>
+			<label kind="invariant" x="90" y="-134">travelTime &lt;= FLOOR_TRAVEL_TIME</label>
+			<label kind="comments" x="90" y="-118">上行运行状态</label>
+		</location>
+		<location id="id2" x="100" y="150">
+			<name x="90" y="166">MovingDown</name>
+			<label kind="invariant" x="90" y="182">travelTime &lt;= FLOOR_TRAVEL_TIME</label>
+			<label kind="comments" x="90" y="198">下行运行状态</label>
+		</location>
+		<location id="id3" x="400" y="0">
+			<name x="390" y="-34">Stopping</name>
+			<label kind="invariant" x="390" y="16">doorTime &lt;= DOOR_OPEN_TIME</label>
+			<label kind="comments" x="390" y="32">停靠中状态（减速-开门-等待）</label>
+		</location>
+		<location id="id4" x="-200" y="300">
+			<name x="-210" y="316">FaultPause</name>
+			<label kind="comments" x="-210" y="332">故障暂停状态</label>
+		</location>
+		<init ref="id0"/>
+		<transition id="id5">
+			<source ref="id4"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-370" y="150">faultCleared?</label>
+			<label kind="assignment" x="-370" y="166">hasFault = false,
+doorOpen = false,
+overloaded = false</label>
+			<label kind="comments" x="-370" y="198">故障排除，回归待机</label>
+			<nail x="-350" y="300"/>
+			<nail x="-350" y="0"/>
+		</transition>
+		<transition id="id6">
+			<source ref="id0"/>
+			<target ref="id4"/>
+			<label kind="guard" x="-192" y="150">overloaded || hasFault</label>
+			<label kind="synchronisation" x="-192" y="166">faultSignal!</label>
+			<label kind="assignment" x="-192" y="182">hasFault = true</label>
+			<label kind="comments" x="-192" y="198">检测到故障（超载/门异常）</label>
+		</transition>
+		<transition id="id7">
+			<source ref="id3"/>
+			<target ref="id0"/>
+			<label kind="guard" x="50" y="50">doorTime &gt;= DOOR_OPEN_TIME &amp;&amp; currentFloor == targetFloor</label>
+			<label kind="synchronisation" x="50" y="66">elevatorStopped!</label>
+			<label kind="assignment" x="50" y="82">doorOpen = false,
+direction = 0,
+elevatorFloor = currentFloor</label>
+			<label kind="comments" x="50" y="114">停靠完成，无后续目标，回归待机</label>
+			<nail x="400" y="100"/>
+			<nail x="-200" y="100"/>
+		</transition>
+		<transition id="id8">
+			<source ref="id3"/>
+			<target ref="id1"/>
+			<label kind="guard" x="250" y="-100">doorTime &gt;= DOOR_OPEN_TIME &amp;&amp; currentFloor &lt; targetFloor</label>
+			<label kind="assignment" x="250" y="-84">doorOpen = false,
+direction = 1,
+travelTime = 0</label>
+			<label kind="comments" x="250" y="-52">停靠完成，继续上行</label>
+		</transition>
+		<transition id="id9">
+			<source ref="id3"/>
+			<target ref="id2"/>
+			<label kind="guard" x="250" y="50">doorTime &gt;= DOOR_OPEN_TIME &amp;&amp; currentFloor &gt; targetFloor</label>
+			<label kind="assignment" x="250" y="66">doorOpen = false,
+direction = -1,
+travelTime = 0</label>
+			<label kind="comments" x="250" y="98">停靠完成，继续下行</label>
+		</transition>
+		<transition id="id10">
+			<source ref="id2"/>
+			<target ref="id3"/>
+			<label kind="guard" x="250" y="150">travelTime &gt;= FLOOR_TRAVEL_TIME</label>
+			<label kind="assignment" x="250" y="166">currentFloor = currentFloor - 1,
+doorOpen = true,
+doorTime = 0,
+elevatorFloor = currentFloor</label>
+			<label kind="synchronisation" x="250" y="214">elevatorArrived!</label>
+			<label kind="comments" x="250" y="230">到达下一层，进入停靠</label>
+			<nail x="100" y="250"/>
+			<nail x="400" y="250"/>
+		</transition>
+		<transition id="id11">
+			<source ref="id1"/>
+			<target ref="id3"/>
+			<label kind="guard" x="250" y="-150">travelTime &gt;= FLOOR_TRAVEL_TIME</label>
+			<label kind="assignment" x="250" y="-134">currentFloor = currentFloor + 1,
+doorOpen = true,
+doorTime = 0,
+elevatorFloor = currentFloor</label>
+			<label kind="synchronisation" x="250" y="-86">elevatorArrived!</label>
+			<label kind="comments" x="250" y="-70">到达下一层，进入停靠</label>
+			<nail x="100" y="-250"/>
+			<nail x="400" y="-250"/>
+		</transition>
+		<transition id="id12">
+			<source ref="id0"/>
+			<target ref="id2"/>
+			<label kind="synchronisation" x="-192" y="50">runCommand?</label>
+			<label kind="guard" x="-192" y="66">elevatorDirection == -1 &amp;&amp; !hasFault</label>
+			<label kind="assignment" x="-192" y="82">direction = -1,
+travelTime = 0</label>
+			<label kind="comments" x="-192" y="114">接收下行指令</label>
+		</transition>
+		<transition id="id13">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="synchronisation" x="-192" y="-150">runCommand?</label>
+			<label kind="guard" x="-192" y="-134">elevatorDirection == 1 &amp;&amp; !hasFault</label>
+			<label kind="assignment" x="-192" y="-118">direction = 1,
+travelTime = 0</label>
+			<label kind="comments" x="-192" y="-86">接收上行指令</label>
+		</transition>
+	</template>
+	<system>// 系统定义
+// 实例化电梯模板
+Elevator1 = Elevator();
+
+// 系统组成
+system Elevator1;
+</system>
+	<queries>
+		<query>
+			<formula>// 验证性质
+
+// 1. 无死锁
+A[] not deadlock
+
+// 2. 电梯不会同时处于多个状态（安全性）
+// A[] (Elevator1.Standby + Elevator1.MovingUp + Elevator1.MovingDown + Elevator1.Stopping + Elevator1.FaultPause) == 1
+
+// 3. 电梯楼层在有效范围内
+A[] Elevator1.currentFloor &gt;= MIN_FLOOR &amp;&amp; Elevator1.currentFloor &lt;= MAX_FLOOR
+
+// 4. 故障状态下电梯不会运行
+A[] Elevator1.FaultPause imply hasFault
+
+// 5. 开门时间不超过限制
+A[] Elevator1.Stopping imply Elevator1.doorTime &lt;= DOOR_OPEN_TIME
+
+// 6. 电梯最终会到达目标楼层（活性）
+// Elevator1.MovingUp or Elevator1.MovingDown --&gt; Elevator1.Stopping
+			</formula>
+			<comment>电梯子系统验证性质</comment>
+		</query>
+	</queries>
+</nta>
