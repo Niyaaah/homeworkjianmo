@@ -1,0 +1,94 @@
+<nta>
+  <declaration>
+    // Declaration for the number of passengers and elevators
+    int numPassengers = 5;
+    int numElevators = 2;
+
+    // Declaration for states and types
+    int stateIdle = 0;
+    int stateMoving = 1;
+    int stateDoorOpen = 2;
+  </declaration>
+
+  <template name="Passenger">
+    <declaration>
+      // Information about passenger
+      int id;
+    </declaration>
+    <location id="idle" x="100" y="100"> <label x="100" y="90" kind="guard">idle</label> </location>
+    <location id="waiting" x="200" y="100"> <label x="200" y="90" kind="guard">waiting</label> </location>
+    <location id="entering" x="300" y="100"> <label x="300" y="90" kind="guard">entering</label> </location>
+    <location id="exiting" x="400" y="100"> <label x="400" y="90" kind="guard">exiting</label> </location>
+
+    <transition>
+      <from ref="idle" />
+      <to ref="waiting" />
+      <label kind="action">requestElevator(id);</label>
+    </transition>
+    <transition>
+      <from ref="waiting" />
+      <to ref="entering" />
+      <label kind="guard">elevatorArrived(id);</label>
+    </transition>
+    <transition>
+      <from ref="entering" />
+      <to ref="exiting" />
+      <label kind="action">enter();</label>
+    </transition>
+  </template>
+
+  <template name="Elevator">
+    <declaration>
+      // Information about elevators
+      int id;
+      int currentFloor;
+      int destFloor;
+    </declaration>
+    <location id="idle" x="100" y="300"> <label x="100" y="290" kind="guard">idle</label> </location>
+    <location id="moving" x="200" y="300"> <label x="200" y="290" kind="guard">moving</label> </location>
+    <location id="doorOpen" x="300" y="300"> <label x="300" y="290" kind="guard">doorOpen</label> </location>
+
+    <transition>
+      <from ref="idle" />
+      <to ref="moving" />
+      <label kind="action">moveTo(destFloor);</label>
+    </transition>
+    <transition>
+      <from ref="moving" />
+      <to ref="doorOpen" />
+      <label kind="guard">reachedFloor(currentFloor);</label>
+    </transition>
+    <transition>
+      <from ref="doorOpen" />
+      <to ref="idle" />
+      <label kind="action">closeDoor();</label>
+    </transition>
+  </template>
+
+  <template name="Scheduler">
+    <declaration>
+      // Management of elevator requests
+      int requestQueue[numPassengers];
+    </declaration>
+    <location id="idle" x="100" y="500"> <label x="100" y="490" kind="guard">idle</label> </location>
+    <location id="processing" x="200" y="500"> <label x="200" y="490" kind="guard">processing</label> </location>
+
+    <transition>
+      <from ref="idle" />
+      <to ref="processing" />
+      <label kind="action">checkRequests();</label>
+    </transition>
+    <transition>
+      <from ref="processing" />
+      <to ref="idle" />
+      <label kind="action">assignElevator(requestQueue);</label>
+    </transition>
+  </template>
+
+  <query>
+    // Verification queries
+    E<> (Passenger.idle);
+    A[] (Elevator.doorOpen);
+  </query>
+
+</nta>
