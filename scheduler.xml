@@ -1,0 +1,25 @@
+<UPPAAL>
+    <schedulermodel>
+        <states>
+            <state name="Listening" />
+            <state name="SchedulingDecision" />
+            <state name="CommandTracking" />
+            <state name="EmergencyScheduling" />
+        </states>
+        <transitions>
+            <transition from="Listening" to="SchedulingDecision" />
+            <transition from="SchedulingDecision" to="CommandTracking" />
+            <transition from="CommandTracking" to="EmergencyScheduling" />
+            <transition from="EmergencyScheduling" to="Listening" />
+        </transitions>
+        <schedulingAlgorithm>
+            <algorithm type="LOOK" />
+            <requestQueueManagement>
+                <queue size="10" />
+                <requestHandling>
+                    <strategy type="FIFO" />
+                </requestHandling>
+            </requestQueueManagement>
+        </schedulingAlgorithm>
+    </schedulermodel>
+</UPPAAL>
